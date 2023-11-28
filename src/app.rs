@@ -1,6 +1,6 @@
-use num_rational::Rational32;
-//use core::str::FromStr;
+use num_rational::ParseRatioError;
 use num_rational::Ratio;
+use num_rational::Rational32;
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -138,22 +138,22 @@ impl eframe::App for TemplateApp {
                 ui.horizontal(|ui| {
                     for rational in row {
                         // Temporary variables for the numerator and denominator
-                        let mut numerator = *rational.numer();
-                        let mut denominator = *rational.denom();
-
+                        let mut temp;
                         // UI for the numerator
-                        ui.add(egui::DragValue::new(&mut numerator).speed(1));
+                        ui.add(egui::DragValue::new(&mut temp).speed(1));
 
-                        // Display a slash
-                        ui.label("/");
+                        let parsed_num = Ratio::from_str(temp);
 
-                        // UI for the denominator
-                        ui.add(egui::DragValue::new(&mut denominator).speed(1)); // Prevent zero denominator
-                                                                                 // Update the rational number
-                        if denominator != 0 {
-                            *rational = Rational32::new_raw(numerator, denominator);
-                        } else {
-                            *rational = Rational32::new_raw(0, 1);
+                        match Ratio::from_str(parsed_num) {
+                            Ok(parsed_num) => {
+                                *rational = parsed_num;
+                            }
+                            Err(ParseRatioError) => {
+                                *rational = Ratio::new(0, 1);
+                            }
+                            Err(_) => {
+                                println!("error unknown occurred");
+                            }
                         }
                     }
                 });

@@ -759,6 +759,7 @@ dependencies = [
  "env_logger",
  "log",
  "num-rational",
+ "num-traits",
  "serde",
  "wasm-bindgen-futures",
 ]
