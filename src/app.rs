@@ -1,6 +1,8 @@
+use egui::{TextEdit, Ui};
 use num_rational::ParseRatioError;
 use num_rational::Ratio;
 use num_rational::Rational32;
+use std::str::FromStr;
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -36,7 +38,7 @@ impl Default for TemplateApp {
             output_text: "".to_owned(),
             n: 4,
             m: 3,
-            matrix: vec![vec![Rational32::new(1, 1); 3]; 4],
+            matrix: vec![vec![Rational32::new(0, 1); 3]; 4],
         }
     }
 }
@@ -113,46 +115,26 @@ impl eframe::App for TemplateApp {
 
         egui::CentralPanel::default().show(ctx, |ui| {
             // The central panel the region left after adding TopPanel's and SidePanel's
-            ui.heading("eframe template");
-
-            ui.horizontal(|ui| {
-                ui.label("Write something: ");
-                ui.text_edit_singleline(&mut self.label);
-            });
-
-            ui.add(egui::Slider::new(&mut self.value, 0.0..=10.0).text("value"));
-            if ui.button("Increment").clicked() {
-                self.value += 1.0;
-            }
-
-            ui.separator();
-
-            ui.add(egui::github_link_file!(
-                "https://github.com/emilk/eframe_template/blob/master/",
-                "Source code."
-            ));
-
             ui.heading("Enter your matrix:");
 
             for row in &mut self.matrix {
                 ui.horizontal(|ui| {
                     for rational in row {
-                        // Temporary variables for the numerator and denominator
-                        let mut temp;
-                        // UI for the numerator
-                        ui.add(egui::DragValue::new(&mut temp).speed(1));
+                        // ui for the string that must be parsed
+                        //ui.add(egui::DragValue::new(&mut temp).speed(1));
 
-                        let parsed_num = Ratio::from_str(temp);
+                        let mut temp = String::new();
 
-                        match Ratio::from_str(parsed_num) {
+                        ui.add(TextEdit::singleline(&mut temp));
+
+                        let parsed_num = Ratio::from_str(&temp);
+
+                        match parsed_num {
                             Ok(parsed_num) => {
                                 *rational = parsed_num;
                             }
-                            Err(ParseRatioError) => {
-                                *rational = Ratio::new(0, 1);
-                            }
                             Err(_) => {
-                                println!("error unknown occurred");
+                                println!("An unknown error occurred");
                             }
                         }
                     }
