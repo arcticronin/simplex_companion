@@ -7,6 +7,7 @@ rust-version = "1.72"
 
 
 [dependencies]
+num-rational = "0.4"
 egui = "0.24.0"
 eframe = { version = "0.24.0", default-features = false, features = [
     "accesskit",     # Make egui comptaible with screen readers. NOTE: adds a lot of dependencies.

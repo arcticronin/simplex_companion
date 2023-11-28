@@ -1,3 +1,7 @@
+use num_rational::Rational32;
+//use core::str::FromStr;
+use num_rational::Ratio;
+
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old statepub
@@ -8,6 +12,12 @@ pub struct TemplateApp {
     #[serde(skip)] // This how you opt-out of serialization of a field
     value: f32,
     mode: Mode,
+    output_text: String,
+
+    #[serde(skip)] // This how you opt-out of serialization of a field
+    matrix: Vec<Vec<Rational32>>,
+    n: i32,
+    m: i32,
 }
 
 #[derive(PartialEq, serde::Deserialize, serde::Serialize)]
@@ -23,6 +33,10 @@ impl Default for TemplateApp {
             label: "Hello World!".to_owned(),
             value: 2.7,
             mode: Mode::Edit,
+            output_text: "".to_owned(),
+            n: 4,
+            m: 3,
+            matrix: vec![vec![Rational32::new(1, 1); 3]; 4],
         }
     }
 }
@@ -38,7 +52,6 @@ impl TemplateApp {
         if let Some(storage) = cc.storage {
             return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
         }
-
         Default::default()
     }
 }
@@ -68,8 +81,8 @@ impl eframe::App for TemplateApp {
                     });
                     ui.add_space(16.0);
                 }
-                ui.menu_button("Tableau", |ui|{
-                //NOTE behaviour!
+                ui.menu_button("Tableau", |ui| {
+                    //NOTE behaviour!
                     if ui.button("Add Constraint").clicked() {};
                     if ui.button("Add Variable").clicked() {};
                     if ui.button("Undo Last Tableau").clicked() {};
@@ -79,10 +92,23 @@ impl eframe::App for TemplateApp {
             });
         });
 
-        egui::SidePanel::left("Options").show(ctx, |ui|{
+        egui::SidePanel::left("Options").show(ctx, |ui| {
             ui.heading("Mode");
             ui.radio_value(&mut self.mode, Mode::Edit, "Edit");
             ui.radio_value(&mut self.mode, Mode::Pivot, "Pivot");
+
+            ui.separator();
+
+            if ui.button("Click me!").clicked() {
+                // Perform some action when the button is clicked
+                // For example, update some output text
+                self.output_text = "Button clicked!".to_string();
+            }
+
+            ui.separator();
+
+            // Add a read-only text edit field to display output
+            ui.label(&self.output_text);
         });
 
         egui::CentralPanel::default().show(ctx, |ui| {
@@ -106,6 +132,34 @@ impl eframe::App for TemplateApp {
                 "Source code."
             ));
 
+            ui.heading("Enter your matrix:");
+
+            for row in &mut self.matrix {
+                ui.horizontal(|ui| {
+                    for rational in row {
+                        // Temporary variables for the numerator and denominator
+                        let mut numerator = *rational.numer();
+                        let mut denominator = *rational.denom();
+
+                        // UI for the numerator
+                        ui.add(egui::DragValue::new(&mut numerator).speed(1));
+
+                        // Display a slash
+                        ui.label("/");
+
+                        // UI for the denominator
+                        ui.add(egui::DragValue::new(&mut denominator).speed(1)); // Prevent zero denominator
+                                                                                 // Update the rational number
+                        if denominator != 0 {
+                            *rational = Rational32::new_raw(numerator, denominator);
+                        } else {
+                            *rational = Rational32::new_raw(0, 1);
+                        }
+                    }
+                });
+            }
+
+            //footer
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
                 powered_by_egui_and_eframe(ui);
                 egui::warn_if_debug_build(ui);
