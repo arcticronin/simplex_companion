@@ -1,3 +1,4 @@
+use egui::ScrollArea;
 use egui::{TextEdit, Ui};
 use num_rational::ParseRatioError;
 use num_rational::Ratio;
@@ -38,7 +39,7 @@ impl Default for TemplateApp {
             output_text: "".to_owned(),
             n: 4,
             m: 3,
-            matrix: vec![vec![Rational32::new(0, 1); 3]; 4],
+            matrix: vec![vec![Rational32::new(0, 1); 3]; 80],
         }
     }
 }
@@ -85,7 +86,9 @@ impl eframe::App for TemplateApp {
                 }
                 ui.menu_button("Tableau", |ui| {
                     //NOTE behaviour!
-                    if ui.button("Add Constraint").clicked() {};
+                    if ui.button("Add Constraint").clicked() {
+                        self.n += 1;
+                    };
                     if ui.button("Add Variable").clicked() {};
                     if ui.button("Undo Last Tableau").clicked() {};
                 });
@@ -114,32 +117,34 @@ impl eframe::App for TemplateApp {
         });
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            // The central panel the region left after adding TopPanel's and SidePanel's
-            ui.heading("Enter your matrix:");
+            egui::ScrollArea::new([false, true]).show(ui, |ui| {
+                // The central panel the region left after adding TopPanel's and SidePanel's
+                ui.heading("Enter your matrix:");
 
-            for row in &mut self.matrix {
-                ui.horizontal(|ui| {
-                    for rational in row {
-                        // ui for the string that must be parsed
-                        //ui.add(egui::DragValue::new(&mut temp).speed(1));
+                for row in &mut self.matrix {
+                    ui.horizontal(|ui| {
+                        for rational in row {
+                            // ui for the string that must be parsed
+                            //ui.add(egui::DragValue::new(&mut temp).speed(1));
 
-                        let mut temp = String::new();
+                            let mut temp = String::new();
 
-                        ui.add(TextEdit::singleline(&mut temp));
+                            ui.add(TextEdit::singleline(&mut temp).desired_width(50.0));
 
-                        let parsed_num = Ratio::from_str(&temp);
+                            let parsed_num = Ratio::from_str(&temp);
 
-                        match parsed_num {
-                            Ok(parsed_num) => {
-                                *rational = parsed_num;
-                            }
-                            Err(_) => {
-                                println!("An unknown error occurred");
+                            match parsed_num {
+                                Ok(parsed_num) => {
+                                    *rational = parsed_num;
+                                }
+                                Err(_) => {
+                                    println!("An unknown error occurred");
+                                }
                             }
                         }
-                    }
-                });
-            }
+                    });
+                }
+            });
 
             //footer
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
