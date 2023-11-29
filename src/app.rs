@@ -1,6 +1,6 @@
-use egui::ScrollArea;
-use egui::{TextEdit, Ui};
-use num_rational::ParseRatioError;
+//use egui::{TextEdit, Ui, ScrollArea};
+//use num_rational::ParseRatioError;
+use egui::TextEdit;
 use num_rational::Ratio;
 use num_rational::Rational32;
 use std::str::FromStr;
@@ -14,19 +14,37 @@ pub struct TemplateApp {
 
     #[serde(skip)] // This how you opt-out of serialization of a field
     value: f32,
+
+    #[serde(skip)] // This how you opt-out of serialization of a field
     mode: Mode,
+
+    #[serde(skip)] // This how you opt-out of serialization of a field
     output_text: String,
 
     #[serde(skip)] // This how you opt-out of serialization of a field
     matrix: Vec<Vec<Rational32>>,
-    n: i32,
-    m: i32,
+
+    #[serde(skip)] // This how you opt-out of serialization of a field
+    input_strings: Vec<Vec<String>>,
+
+    n: usize,
+    m: usize,
 }
 
 #[derive(PartialEq, serde::Deserialize, serde::Serialize)]
 enum Mode {
     Edit,
     Pivot,
+}
+pub struct Tableau {
+    iteration: usize,
+    vars: Vec<String>,
+    artificial_vars: Vec<String>,
+    tableau: Vec<Equation>,
+}
+pub struct Equation {
+    basic_var: String,
+    vec: Vec<Rational32>,
 }
 
 impl Default for TemplateApp {
@@ -39,7 +57,8 @@ impl Default for TemplateApp {
             output_text: "".to_owned(),
             n: 4,
             m: 3,
-            matrix: vec![vec![Rational32::new(0, 1); 3]; 80],
+            matrix: vec![vec![Rational32::new(0, 1); 3]; 10],
+            input_strings: vec![vec!["0".to_string(); 3]; 10],
         }
     }
 }
@@ -119,52 +138,81 @@ impl eframe::App for TemplateApp {
         egui::CentralPanel::default().show(ctx, |ui| {
             egui::ScrollArea::new([false, true]).show(ui, |ui| {
                 // The central panel the region left after adding TopPanel's and SidePanel's
-                ui.heading("Enter your matrix:");
+                if self.mode == Mode::Edit {
+                    ui.heading("Enter your matrix:");
 
-                for row in &mut self.matrix {
-                    ui.horizontal(|ui| {
-                        for rational in row {
-                            // ui for the string that must be parsed
-                            //ui.add(egui::DragValue::new(&mut temp).speed(1));
+                    egui::Grid::new("some_unique_id").show(ui, |ui| {
+                        for (row_index, row) in self.matrix.iter_mut().enumerate() {
+                            ui.horizontal(|ui| {
+                                for (col_index, rational) in row.iter_mut().enumerate() {
+                                    let temp = &mut self.input_strings[row_index][col_index];
 
-                            let mut temp = String::new();
+                                    // Add the text edit and get its response
+                                    let response =
+                                        ui.add(TextEdit::singleline(temp).desired_width(50.0));
 
-                            ui.add(TextEdit::singleline(&mut temp).desired_width(50.0));
-
-                            let parsed_num = Ratio::from_str(&temp);
-
-                            match parsed_num {
-                                Ok(parsed_num) => {
-                                    *rational = parsed_num;
+                                    // Check if this widget lost focus
+                                    if response.lost_focus() {
+                                        match Ratio::from_str(temp) {
+                                            Ok(parsed_num) => {
+                                                *rational = parsed_num;
+                                            }
+                                            Err(_e) => {
+                                                *rational = Rational32::new(0, 1);
+                                            }
+                                        }
+                                    }
                                 }
-                                Err(_) => {
-                                    println!("An unknown error occurred");
+                            });
+                            ui.end_row();
+                        }
+                    });
+                } else if self.mode == Mode::Pivot {
+                    ui.heading("Starting Pivot Operations");
+
+                    egui::Grid::new("some_unique_id").show(ui, |ui| {
+                        for (row_index, row) in self.matrix.clone().iter_mut().enumerate() {
+                            ui.horizontal(|ui| {
+                                for (col_index, _rational) in row.iter_mut().enumerate() {
+                                    if col_index == 0 {
+                                        ui.separator();
+                                        ui.separator();
+                                    }
+
+                                    ui.label(format!("{}", self.matrix[row_index][col_index]));
+                                    if col_index < self.m - 2 {
+                                        ui.separator();
+                                    } else if col_index == self.m - 2 {
+                                        ui.separator();
+                                        ui.separator();
+                                    }
                                 }
-                            }
+                            });
+                            ui.end_row();
                         }
                     });
                 }
-            });
 
-            //footer
-            ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
-                powered_by_egui_and_eframe(ui);
-                egui::warn_if_debug_build(ui);
+                //footer
+                ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
+                    powered_by_egui_and_eframe(ui);
+                    egui::warn_if_debug_build(ui);
+                });
             });
         });
-    }
-}
 
-fn powered_by_egui_and_eframe(ui: &mut egui::Ui) {
-    ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 0.0;
-        ui.label("Powered by ");
-        ui.hyperlink_to("egui", "https://github.com/emilk/egui");
-        ui.label(" and ");
-        ui.hyperlink_to(
-            "eframe",
-            "https://github.com/emilk/egui/tree/master/crates/eframe",
-        );
-        ui.label(".");
-    });
+        fn powered_by_egui_and_eframe(ui: &mut egui::Ui) {
+            ui.horizontal(|ui| {
+                ui.spacing_mut().item_spacing.x = 0.0;
+                ui.label("Powered by ");
+                ui.hyperlink_to("egui", "https://github.com/emilk/egui");
+                ui.label(" and ");
+                ui.hyperlink_to(
+                    "eframe",
+                    "https://github.com/emilk/egui/tree/master/crates/eframe",
+                );
+                ui.label(".");
+            });
+        }
+    }
 }
